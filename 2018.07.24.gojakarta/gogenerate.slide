@@ -1,0 +1,202 @@
+Leveraging Go Generate
+GoJakarta
+17:00 24 Jul 2018
+Tags: go generate
+
+Roland Rifandi Utama
+Site Reliability Engineer Lead, Bukalapak
+roland.rutama@gmail.com
+https://github.com/rolandhawk/
+
+* What I think
+
+Write code in Golang is enjoyable. But static typed language tend to have boilerplate code.
+
+Boilerplate code example:
+
+- Creating `String()` function for a set of integer constants
+- Creating `struct` type from json schema.
+- Creating decorator for `interface`.
+
+* go generate for reducing boilerplate code
+
+- introduced in Go 1.4.
+- manual invocation.
+- invoked by package's author, not user.
+
+Command
+
+  $ go generate
+
+* how it works
+
+Parse and scan go code in package for this comments:
+
+	//go:generate command argument...
+
+And run it sequentially.
+
+.code simple/main.go
+
+* code generation: stringer
+
+Generate `String()` func for `IDType` enum.
+
+.code stringer/identity.go /TYPE OMIT/,/TYPE OMIT/
+
+what we usually do
+
+.code stringer/manual/identity.go /EXAMPLE OMIT/,/EXAMPLE OMIT/
+
+* code generation: stringer (cont.d)
+
+Using stringer, code generator for generating enum string
+
+  $ go get golang.org/x/tools/cmd/stringer
+
+Add `//go:generate` into file
+
+.code stringer/identity.go /GOGENERATE OMIT/,/GOGENERATE OMIT/
+
+* code generation: schematyper
+
+Creating user `struct` from json schema.
+
+user.json:
+
+.code schematyper/user.json
+
+* code generation: schematyper (cont.d)
+
+what we usually do
+
+.code schematyper/manual/entity.go
+
+* code generation: schematyper (cont.d)
+
+Install
+
+	$ go get github.com/idubinskiy/schematyper
+
+Add
+
+.code schematyper/entity.go
+
+Run
+
+  $ go generate
+
+* Let's write new code generator
+
+* Problem
+
+Want to log every UserService Call.
+
+.code gen/user.go /INTERFACE OMIT/,/INTERFACE OMIT/
+
+Idea: Decorator Pattern
+
+.code gen/decsample/sample.go
+
+* Before we start
+
+Exported Environment Variables from go generate
+
+  $GOARCH
+          The execution architecture (arm, amd64, etc.)
+  $GOOS
+          The execution operating system (linux, windows, etc.)
+  $GOFILE
+          The base name of the file.
+  $GOLINE
+          The line number of the directive in the source file.
+  $GOPACKAGE
+          The name of the package of the file containing the directive.
+  $DOLLAR
+          A dollar sign.
+
+* Before we start (cont.d)
+
+Useful packages:
+
+- `go/build`, `go/scanner`, `go/parser`, `go/ast`, and `go/types`: gather information about golang source code and manipulate it for code generation input.
+- `text/template`: data-driven templates for generating textual output.
+- `go/format`: implements standard formatting of Go source.
+
+* Create //go:generate comment
+
+Add comment
+
+.code gen/user.go /GOGENERATE OMIT/,/GOGENERATE OMIT/
+
+* Code generator
+
+Typical code generation steps:
+
+- Parse source input
+- Extract useful data from parsed input
+- Use extracted data to generate output with template's help
+- Optionally, prettify output
+- Write into file
+
+* Code generator (cont.d)
+
+decorator/main.go
+
+.code gen/decorator/main.go /MAIN OMIT/,/MAIN OMIT/
+
+* Code generator: parsing file
+
+Take parse file and return its Abstract Syntax Tree (AST)
+
+.code gen/decorator/main.go /PARSEFILE OMIT/,/PARSEFILE OMIT/
+
+See [[https://golang.org/pkg/go/parser/][Go Parser]] for further information.
+
+* Code generator: find interface definition
+
+Traverse AST to find desired node.
+
+.image gen/asset/ast.jpg
+
+See [[https://golang.org/pkg/go/ast/][Go AST]] for further information.
+
+* Code generator: extract useful data from ast
+
+Transform from
+
+.image gen/asset/interface.jpg
+
+* Code generator: extract useful data from ast (cont.d)
+
+Into
+
+.code gen/decorator/main.go /STRUCTDATA OMIT/,/STRUCTDATA OMIT/
+
+* Code generator: template
+
+Use `text/template` for templating.
+
+.code gen/decorator/main.go /TEMPLATE OMIT/,/TEMPLATE OMIT/
+
+* Code generator: FINAL STEP!
+
+Execute:
+
+  go generate
+
+Congratulation for your finished code generator.
+
+See [[https://github.com/rolandhawk/presentation][https://github.com/rolandhawk/presentation]] for demo code.
+
+* Summary
+
+- Go generate can reduce boilerplate code.
+- We can use existing tools or make our own.
+- Use your imagination!
+
+* References
+
+.link https://golang.org/pkg/cmd/go/internal/generate/ Go Generate
+.link https://github.com/idubinskiy/schematyper Schematyper
+.link https://blog.gopheracademy.com/advent-2015/reducing-boilerplate-with-go-generate/ Reducing Boilerplate with Go Generate
